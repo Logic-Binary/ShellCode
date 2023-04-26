@@ -1,12 +1,12 @@
 #include<Windows.h>
 #include<tchar.h>
 #include<iostream>
-#define path "C:\\Users\\XX\\Desktop\\XXXXXX.exe"
+#define path "C:\\Users\\罗辑\\Desktop\\XXXXXX.exe"
 
 
-BOOL changePE(DWORD MessageBoxAdd,DWORD hInstance) {
+BOOL changePE(DWORD MessageBoxAdd) {
 	//读文件到内存中
-	HANDLE hFile = CreateFile(path, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE hFile = CreateFile(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if ((DWORD)hFile == INVALID_FILE_ATTRIBUTES) {
 		return -1;
 	}
@@ -31,15 +31,15 @@ BOOL changePE(DWORD MessageBoxAdd,DWORD hInstance) {
 	PIMAGE_SECTION_HEADER section_header = PIMAGE_SECTION_HEADER(IMAGE_FIRST_SECTION(nt_header));
 
 	//遍历区段，找合适的位置放代码
-	for (int i = 0; i < file_header->NumberOfSections-1; i++) {
+	for (int i = 0; i < file_header->NumberOfSections - 1; i++) {
 		//如果本区段在文件中的大小-这个区段文件对齐前实际大小>=18
 		if (int(section_header->SizeOfRawData) - int(section_header->Misc.VirtualSize) >= 18) {
 			DWORD address = section_header->PointerToRawData + (DWORD)buf;
 			address = (DWORD)address + section_header->SizeOfRawData - 18;
 			//这里需要求三个值
 			//call的地址
-			DWORD Offset = address-(DWORD)buf + 8 - section_header->PointerToRawData;
-			DWORD CallAddress = MessageBoxAdd - (Offset + section_header->VirtualAddress+ hInstance) - 5;
+			DWORD Offset = address - (DWORD)buf + 8 - section_header->PointerToRawData;
+			DWORD CallAddress = MessageBoxAdd - (Offset + section_header->VirtualAddress + option_header->AddressOfEntryPoint) - 5;
 			for (int j = 0; j < 2; j++) {
 				*(PDWORD)address = 0x006A006A;
 				//设置偏移，写入
@@ -51,7 +51,7 @@ BOOL changePE(DWORD MessageBoxAdd,DWORD hInstance) {
 			//设置偏移，写入
 			overLapped.Offset = address - (DWORD)buf;
 			WriteFile(hFile, (LPCVOID)address, 1, &writeSize, &overLapped);
-			address ++;
+			address++;
 			*(PDWORD)address = CallAddress;
 			overLapped.Offset = address - (DWORD)buf;
 			WriteFile(hFile, (LPCVOID)address, 4, &writeSize, &overLapped);
@@ -59,7 +59,8 @@ BOOL changePE(DWORD MessageBoxAdd,DWORD hInstance) {
 			//jmp的地址
 			Offset += 5;
 			DWORD OEPAddress = option_header->AddressOfEntryPoint;
-			DWORD JmpAddress = OEPAddress + hInstance - (Offset + section_header->VirtualAddress + hInstance) - 5;
+			DWORD JmpAddress = OEPAddress + option_header->AddressOfEntryPoint - 
+				(Offset + section_header->VirtualAddress + option_header->AddressOfEntryPoint) - 5;
 			*(PCHAR)address = 0xE9;
 			overLapped.Offset = address - (DWORD)buf;
 			WriteFile(hFile, (LPCVOID)address, 1, &writeSize, &overLapped);
@@ -69,7 +70,7 @@ BOOL changePE(DWORD MessageBoxAdd,DWORD hInstance) {
 			WriteFile(hFile, (LPCVOID)address, 4, &writeSize, &overLapped);
 
 			//oep处要修改的值
-			option_header->AddressOfEntryPoint = Offset-13+section_header->VirtualAddress;
+			option_header->AddressOfEntryPoint = Offset - 13 + section_header->VirtualAddress;
 			overLapped.Offset = (DWORD)option_header + 16 - (DWORD)buf;
 			WriteFile(hFile, LPVOID((DWORD)option_header + 16), 4, &writeSize, &overLapped);
 			if (buf != NULL) {
@@ -77,7 +78,7 @@ BOOL changePE(DWORD MessageBoxAdd,DWORD hInstance) {
 				buf = NULL;
 			}
 			return 1;
-			
+
 		}
 		section_header++;
 	}
@@ -93,8 +94,8 @@ int _tmain(char* argv, char* args[]) {
 	HMODULE h = LoadLibrary("user32.dll");
 	FARPROC a = GetProcAddress(h, "MessageBoxW");
 	HMODULE hModule = GetModuleHandle(NULL);
-	
-	changePE((DWORD)a,(DWORD)hModule);
+
+	changePE((DWORD)a);
 
 	return 0;
 }
