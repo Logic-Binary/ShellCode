@@ -1,27 +1,27 @@
 #include<Windows.h>
 #include<tchar.h>
 #include<iostream>
-#define path "C:\\Users\\ÂŞ¼­\\Desktop\\111.exe"
-#define path2 "C:\\Users\\ÂŞ¼­\\Desktop\\999.exe"
+#define path "C:\\Users\\ç½—è¾‘\\Desktop\\111.exe"
+#define path2 "C:\\Users\\ç½—è¾‘\\Desktop\\999.exe"
 
 BOOL changePE(DWORD MessageBoxAdd) {
-	//¶ÁÎÄ¼şµ½ÄÚ´æÖĞ
+	//è¯»æ–‡ä»¶åˆ°å†…å­˜ä¸­
 	HANDLE hFile = CreateFile(path, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	HANDLE hFile2 = CreateFile(path2, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if ((DWORD)hFile == INVALID_FILE_ATTRIBUTES) {
 		return -1;
 	}
-	//»ñÈ¡´óĞ¡
+	//è·å–å¤§å°
 	DWORD size = GetFileSize(hFile, NULL);
-	//ÉêÇë¿Õ¼ä
+	//ç”³è¯·ç©ºé—´
 	LPVOID buf = new char[size] {0};
-	//¶Á³öÀ´
+	//è¯»å‡ºæ¥
 	DWORD readSize = 0;
 	ReadFile(hFile, buf, size, &readSize, NULL);
 
-	//ÀûÓÃWriteFileĞ´ÈëÎÄ¼ş
-	//ÖÁÓÚÎÄ¼şÖ¸ÕëµÄÆ«ÒÆ£¬²Î¿¼WriteFileº¯ÊıµÄ×îºóÒ»¸ö²ÎÊı¿ÉÒÔÉèÖÃ
+	//åˆ©ç”¨WriteFileå†™å…¥æ–‡ä»¶
+	//è‡³äºæ–‡ä»¶æŒ‡é’ˆçš„åç§»ï¼Œå‚è€ƒWriteFileå‡½æ•°çš„æœ€åä¸€ä¸ªå‚æ•°å¯ä»¥è®¾ç½®
 	OVERLAPPED overLapped = { 0 };
 	overLapped.Offset = 0;
 	DWORD writeSize = 0;
@@ -32,25 +32,25 @@ BOOL changePE(DWORD MessageBoxAdd) {
 	PIMAGE_FILE_HEADER file_header = PIMAGE_FILE_HEADER(&(nt_header->FileHeader));
 	PIMAGE_SECTION_HEADER section_header = PIMAGE_SECTION_HEADER(IMAGE_FIRST_SECTION(nt_header));
 
-	//±éÀúÇø¶Î£¬ÕÒºÏÊÊµÄÎ»ÖÃ·Å´úÂë
+	//éå†åŒºæ®µï¼Œæ‰¾åˆé€‚çš„ä½ç½®æ”¾ä»£ç 
 	for (int i = 0; i < file_header->NumberOfSections - 1; i++) {
-		//Èç¹û±¾Çø¶ÎÔÚÎÄ¼şÖĞµÄ´óĞ¡-Õâ¸öÇø¶ÎÎÄ¼ş¶ÔÆëÇ°Êµ¼Ê´óĞ¡>=18
+		//å¦‚æœæœ¬åŒºæ®µåœ¨æ–‡ä»¶ä¸­çš„å¤§å°-è¿™ä¸ªåŒºæ®µæ–‡ä»¶å¯¹é½å‰å®é™…å¤§å°>=18
 		if (int(section_header->SizeOfRawData) - int(section_header->Misc.VirtualSize) >= 18) {
 			DWORD address = section_header->PointerToRawData + (DWORD)buf;
 			address = (DWORD)address + section_header->SizeOfRawData - 18;
-			//ÕâÀïĞèÒªÇóÈı¸öÖµ
-			//callµÄµØÖ·
+			//è¿™é‡Œéœ€è¦æ±‚ä¸‰ä¸ªå€¼
+			//callçš„åœ°å€
 			DWORD Offset = address - (DWORD)buf + 8 - section_header->PointerToRawData;
 			DWORD CallAddress = MessageBoxAdd - (Offset + section_header->VirtualAddress + option_header->ImageBase) - 5;
 			for (int j = 0; j < 2; j++) {
 				*(PDWORD)address = 0x006A006A;
-				//ÉèÖÃÆ«ÒÆ£¬Ğ´Èë
+				//è®¾ç½®åç§»ï¼Œå†™å…¥
 				overLapped.Offset = address - (DWORD)buf;
 				WriteFile(hFile, (LPCVOID)address, 4, &writeSize, &overLapped);
 				address += 4;
 			}
 			*(PCHAR)address = 0xE8;
-			//ÉèÖÃÆ«ÒÆ£¬Ğ´Èë
+			//è®¾ç½®åç§»ï¼Œå†™å…¥
 			overLapped.Offset = address - (DWORD)buf;
 			WriteFile(hFile, (LPCVOID)address, 1, &writeSize, &overLapped);
 			address++;
@@ -58,7 +58,7 @@ BOOL changePE(DWORD MessageBoxAdd) {
 			overLapped.Offset = address - (DWORD)buf;
 			WriteFile(hFile, (LPCVOID)address, 4, &writeSize, &overLapped);
 			address += 4;
-			//jmpµÄµØÖ·
+			//jmpçš„åœ°å€
 			Offset += 5;
 			DWORD OEPAddress = option_header->AddressOfEntryPoint;
 			//DWORD JmpAddress = OEPAddress + option_header->ImageBase -(Offset + section_header->VirtualAddress + option_header->ImageBase) - 5;
@@ -71,7 +71,7 @@ BOOL changePE(DWORD MessageBoxAdd) {
 			*(PDWORD)address = JmpAddress;
 			WriteFile(hFile, (LPCVOID)address, 4, &writeSize, &overLapped);
 
-			//oep´¦ÒªĞŞ¸ÄµÄÖµ
+			//oepå¤„è¦ä¿®æ”¹çš„å€¼
 			option_header->AddressOfEntryPoint = Offset - 13 + section_header->VirtualAddress;
 			overLapped.Offset = (DWORD)option_header + 16 - (DWORD)buf;
 			WriteFile(hFile, LPVOID((DWORD)option_header + 16), 4, &writeSize, &overLapped);
@@ -95,7 +95,7 @@ BOOL changePE(DWORD MessageBoxAdd) {
 	return 0;
 }
 
-int _tmain(char* argv, char* args[]) {
+int _tmain(char argc, char* argv[]) {
 
 	HMODULE h = LoadLibrary("user32.dll");
 	FARPROC a = GetProcAddress(h, "MessageBoxA");
